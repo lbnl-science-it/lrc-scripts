@@ -50,9 +50,7 @@ if [[ $PRESET == "lrc" ]]; then
     mkdir -p $LRC_OUTPUT_DIR
   fi
   # enforce file perm 700 for .ssh
-  if find $(dirname $SSH_DIR) -type d -name $(basename $SSH_DIR) ! -perm 700 | grep -q .; then
-    chmod 700 $SSH_DIR
-  fi
+  chmod 700 $SSH_DIR
 
 
   OUTPUT_DIR=$LRC_OUTPUT_DIR
