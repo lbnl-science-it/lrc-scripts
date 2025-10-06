@@ -40,7 +40,7 @@ done
 
 # Handle Presets
 if [[ $PRESET == "lrc" ]]; then
-  LRC_OUTPUT_DIR="$HOME/.ssh/ssh_certs/"
+  LRC_OUTPUT_DIR="$HOME/.ssh/ssh_certs"
   LRC_KEY_NAME="lrc_cert"
   SSH_DIR="$HOME/.ssh"
 
