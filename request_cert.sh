@@ -7,6 +7,7 @@ LIFETIME="12h"
 KEY_NAME=""
 SERVICE_USER=""
 PRESET=""
+LOGIN_NODE="lrc-login.lbl.gov"
 
 
 
@@ -43,6 +44,7 @@ if [[ $PRESET == "lrc" ]]; then
   LRC_OUTPUT_DIR="$HOME/.ssh/ssh_certs"
   LRC_KEY_NAME="lrc_cert"
   SSH_DIR="$HOME/.ssh"
+  LOGIN_NODE="lrc-login.lbl.gov"
 
   # Check if the location LRC_OUTPUT_DIR exists
   # and create the directory if it doesn't
@@ -55,6 +57,23 @@ if [[ $PRESET == "lrc" ]]; then
 
   OUTPUT_DIR=$LRC_OUTPUT_DIR
   KEY_NAME=$LRC_KEY_NAME
+
+elif [[ $PRESET == "brc" ]]; then
+  HOST="https://msm.brc.lbl.gov"
+  BRC_OUTPUT_DIR="$HOME/.ssh/ssh_certs"
+  BRC_KEY_NAME="brc_cert"
+  SSH_DIR="$HOME/.ssh"
+  LOGIN_NODE="hpc.brc.berkeley.edu"
+
+  # Check if the location BRC_OUTPUT_DIR exists
+  # and create the directory if it doesn't
+  if [[ ! -d $BRC_OUTPUT_DIR ]]; then
+    mkdir -p $BRC_OUTPUT_DIR
+  fi
+  # enforce file perm 700 for .ssh
+  chmod 700 $SSH_DIR
+  OUTPUT_DIR=$BRC_OUTPUT_DIR
+  KEY_NAME=$BRC_KEY_NAME
 
 fi
 
@@ -108,7 +127,7 @@ gen_cert() {
   chmod 600 "$OUTPUT_DIR/$KEY_NAME"
   echo "wrote key $OUTPUT_DIR/$KEY_NAME"
   echo "key expires at $expires_at"
-  echo "Usage: ssh -i $OUTPUT_DIR/$KEY_NAME lrc-login.lbl.gov"
+  echo "Usage: ssh -i $OUTPUT_DIR/$KEY_NAME $LOGIN_NODE"
   rm out.json
 
   echo "Done"
