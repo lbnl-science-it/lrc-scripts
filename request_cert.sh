@@ -127,7 +127,7 @@ gen_cert() {
   chmod 600 "$OUTPUT_DIR/$KEY_NAME"
   echo "wrote key $OUTPUT_DIR/$KEY_NAME"
   echo "key expires at $expires_at"
-  echo "Usage: ssh -i $OUTPUT_DIR/$KEY_NAME $LOGIN_NODE"
+  echo "Usage: ssh -i $OUTPUT_DIR/$KEY_NAME -l $user $LOGIN_NODE"
   rm out.json
 
   echo "Done"
