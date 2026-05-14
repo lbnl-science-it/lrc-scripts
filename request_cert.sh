@@ -79,6 +79,24 @@ fi
 
 
 
+# Check if an existing cert is still valid by inspecting its actual expiration
+cert_is_valid() {
+  local cert_file="$OUTPUT_DIR/$KEY_NAME-cert.pub"
+  [[ -f "$cert_file" ]] || return 1
+  python3 -c "
+from datetime import datetime
+import subprocess, sys
+result = subprocess.run(['ssh-keygen', '-L', '-f', sys.argv[1]], capture_output=True, text=True)
+for line in result.stdout.splitlines():
+    if 'Valid:' in line:
+        expiry = line.split('to ')[-1].strip()
+        expires = datetime.fromisoformat(expiry).astimezone()
+        now = datetime.now().astimezone()
+        sys.exit(0 if now < expires else 1)
+sys.exit(1)
+" "$cert_file"
+}
+
 gen_cert() {
 
   echo -n "Username: "
@@ -137,14 +155,11 @@ gen_cert() {
 
 ## Generate CERT
 if [[ $PRESET == "lrc" ]]; then
-  ## Check if there's an existing Certificate
-  # Renew cert if it's older than 12 hours
-  if find $OUTPUT_DIR -name $KEY_NAME -mmin -720 | grep -q .; then
-    echo "Cert is less than 12 hours old.";
+  ## Check if there's an existing, unexpired certificate
+  if cert_is_valid; then
+    echo "Cert is still valid."
     echo "No need to renew."
   else
-    #echo "Cert is older than 12 hours.";
-    #echo "Renewing..."
     gen_cert
   fi
 else
