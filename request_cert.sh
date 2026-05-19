@@ -12,13 +12,13 @@ LOGIN_NODE="lrc-login.lbl.gov"
 
 
 usage() {
-    echo "Usage: $0 [-a HOST] [-o OUTPUT_DIR] [-l LIFETIME] [-s SERVICE_USER] [-p PRESET ]" 1>&2
-    echo "  -a HOST           MSM server host (default: https://msm.lbl.gov:8443)" 1>&2
+    echo "Usage: $0 [-a HOST] [-o OUTPUT_DIR] [-n KEY_NAME] [-l LIFETIME] [-s SERVICE_USER] [-p PRESET]" 1>&2
+    echo "  -a HOST           MSM server host (default: https://msm.scs.lbl.gov)" 1>&2
     echo "  -o OUTPUT_DIR     Directory to store keys (default: current directory)" 1>&2
     echo "  -n KEY_NAME       Filename to store key as (default: key ID)" 1>&2
     echo "  -l LIFETIME       Certificate lifetime (default: 12h)" 1>&2
     echo "  -s SERVICE_USER   Service User to request cert for (default: none)" 1>&2
-    echo "  -p PRESET         Use a pre-defined preset: lrc (default: none)" 1>&2
+    echo "  -p PRESET         Use a pre-defined preset: lrc, brc (default: none)" 1>&2
     exit 1
 }
 
@@ -79,6 +79,28 @@ fi
 
 
 
+# Add or verify SSH config entry so the cert is used automatically
+ensure_ssh_config() {
+  local host_alias="$1"
+  local hostname="$2"
+  local cert_user="$3"
+  local key_path="$4"
+  local ssh_config="$HOME/.ssh/config"
+
+  if [[ ! -f "$ssh_config" ]]; then
+    touch "$ssh_config"
+    chmod 600 "$ssh_config"
+  fi
+
+  if grep -q "Host.*${host_alias}" "$ssh_config"; then
+    return 0
+  fi
+
+  printf "\nHost %s %s\n    User %s\n    HostName %s\n    IdentityFile %s\n    IdentitiesOnly yes\n" \
+    "$host_alias" "$hostname" "$cert_user" "$hostname" "$key_path" >> "$ssh_config"
+  echo "Added SSH config entry for $host_alias"
+}
+
 # Check if an existing cert is still valid by inspecting its actual expiration
 cert_is_valid() {
   local cert_file="$OUTPUT_DIR/$KEY_NAME-cert.pub"
@@ -98,6 +120,8 @@ sys.exit(1)
 }
 
 gen_cert() {
+  TMPFILE=$(mktemp)
+  trap 'rm -f "$TMPFILE"' EXIT
 
   echo -n "Username: "
   read -r user
@@ -110,16 +134,15 @@ gen_cert() {
   echo "Requesting cert..."
   ret=-1
   [[ -z "$SERVICE_USER" ]] && { 
-    ret=$(curl --silent -o out.json --write-out "%{http_code}" "$HOST/v1/cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\", \"lifetime\":\"$LIFETIME\"}")
+    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" "$HOST/v1/cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\", \"lifetime\":\"$LIFETIME\"}")
   } || {
-    ret=$(curl --silent -o out.json --write-out "%{http_code}" "$HOST/v1/service_cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\",\"service_user\":\"$SERVICE_USER\", \"lifetime\":\"$LIFETIME\"}")
+    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" "$HOST/v1/service_cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\",\"service_user\":\"$SERVICE_USER\", \"lifetime\":\"$LIFETIME\"}")
   }
   
   [[ $ret != "201" ]] && {
     echo "auth failed - status code: $ret"
-    cat out.json
+    cat "$TMPFILE"
     echo -ne "\n"
-    rm out.json
     exit
   }
   
@@ -133,20 +156,19 @@ gen_cert() {
     python3 -c "from datetime import datetime; import sys; print(datetime.fromisoformat(sys.stdin.read().strip()).astimezone().strftime('%Y-%m-%d %H:%M:%S %Z'))";
   }
   
-  key_id=$(cat out.json | q "key_id")
+  key_id=$(cat "$TMPFILE" | q "key_id")
   echo "key id: $key_id"
   [[ -z "$KEY_NAME" ]] && KEY_NAME="$key_id"
   
-  cat out.json | q "public_key" > "$OUTPUT_DIR/$KEY_NAME.pub"
-  cat out.json | q "private_key" > "$OUTPUT_DIR/$KEY_NAME"
-  cat out.json | q "signed_public_key" > "$OUTPUT_DIR/$KEY_NAME-cert.pub"
-  expires_at=$(cat out.json | q "expires_at" | t)
+  cat "$TMPFILE" | q "public_key" > "$OUTPUT_DIR/$KEY_NAME.pub"
+  cat "$TMPFILE" | q "private_key" > "$OUTPUT_DIR/$KEY_NAME"
+  cat "$TMPFILE" | q "signed_public_key" > "$OUTPUT_DIR/$KEY_NAME-cert.pub"
+  expires_at=$(cat "$TMPFILE" | q "expires_at" | t)
   
   chmod 600 "$OUTPUT_DIR/$KEY_NAME"
   echo "wrote key $OUTPUT_DIR/$KEY_NAME"
   echo "key expires at $expires_at"
   echo "Usage: ssh -i $OUTPUT_DIR/$KEY_NAME -l $user $LOGIN_NODE"
-  rm out.json
 
   echo "Done"
 }
@@ -161,6 +183,7 @@ if [[ $PRESET == "lrc" ]]; then
     echo "No need to renew."
   else
     gen_cert
+    ensure_ssh_config "lrc-login" "$LOGIN_NODE" "$user" "~/.ssh/ssh_certs/$KEY_NAME"
   fi
 else
   # Default
