@@ -1,4 +1,4 @@
-# `lrc-scripts`: Useful Scripts for Lawrencium and BRC
+# `lrc-scripts`: Useful Scripts for Lawrencium
 
 ## Prerequisites
 
@@ -70,11 +70,3 @@ Host brc-login hpc.brc.berkeley.edu
 ```
 
 `IdentitiesOnly yes` prevents SSH from trying other keys (e.g., from the SSH agent) before the certificate, which can cause "too many authentication failures" errors.
-
-## `get_keys.sh`
-
-Requests a key pair from the local MSM server (`https://localhost`). Prompts for username, password, and MFA. Writes the public key, private key, and signed certificate to the current directory, named by the key ID returned from the server.
-
-## `revoke_key.sh`
-
-Revokes an existing certificate via the local MSM server (`https://localhost:31337`). Prompts for username, password, MFA, and the certificate ID to revoke.
