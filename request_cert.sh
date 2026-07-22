@@ -134,9 +134,9 @@ gen_cert() {
   echo "Requesting cert..."
   ret=-1
   [[ -z "$SERVICE_USER" ]] && { 
-    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" "$HOST/v1/cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\", \"lifetime\":\"$LIFETIME\"}")
+    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" -H "True-Client-IP: 127.0.0.1" "$HOST/v1/cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\", \"lifetime\":\"$LIFETIME\"}")
   } || {
-    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" "$HOST/v1/service_cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\",\"service_user\":\"$SERVICE_USER\", \"lifetime\":\"$LIFETIME\"}")
+    ret=$(curl --silent -o "$TMPFILE" --write-out "%{http_code}" -H "True-Client-IP: 127.0.0.1" "$HOST/v1/service_cert" -d "{\"username\":\"$user\",\"password\":\"$password\",\"mfa\":\"$mfa\",\"service_user\":\"$SERVICE_USER\", \"lifetime\":\"$LIFETIME\"}")
   }
   
   [[ $ret != "201" ]] && {
