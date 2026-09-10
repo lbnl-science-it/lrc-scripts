@@ -57,13 +57,13 @@ The `lrc` preset automatically adds an SSH config entry if one doesn't already e
 
 ```
 Host lrc-login lrc-login.lbl.gov
-    User username
+    User your-username
     HostName lrc-login.lbl.gov
     IdentityFile ~/.ssh/ssh_certs/lrc_cert
     IdentitiesOnly yes
 
 Host brc-login hpc.brc.berkeley.edu
-    User username
+    User your-username
     HostName hpc.brc.berkeley.edu
     IdentityFile ~/.ssh/ssh_certs/brc_cert
     IdentitiesOnly yes
